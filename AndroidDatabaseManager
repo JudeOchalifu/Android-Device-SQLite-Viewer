@@ -1,0 +1,943 @@
+package com.jude.dribsndrabs;
+
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.database.MatrixCursor;
+import android.database.SQLException;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
+import android.widget.Toast;
+
+import com.jude.dribsndrabs.database_constants.Constants;
+import com.jude.dribsndrabs.model.Credit;
+import com.jude.dribsndrabs.model.CreditInstalment;
+import com.jude.dribsndrabs.model.Creditor;
+import com.jude.dribsndrabs.model.Debt;
+import com.jude.dribsndrabs.model.DebtInstalment;
+import com.jude.dribsndrabs.model.Debtor;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+
+/**
+ * Created by Jude on 27/06/2015.
+ *
+ */
+public class DatabaseManager extends SQLiteOpenHelper {
+
+    //private CountersSharedPreferences drawerListCounters;
+    private Context mContext;
+
+    public DatabaseManager(Context context) {
+        super(context, Constants.DATABASE_NAME, null, Constants.DATABASE_VERSION);
+        mContext = context;
+        //drawerListCounters = new CountersSharedPreferences(mContext);
+    }
+
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+        db.execSQL(Constants.CREATE_DEBT_TABLE);
+        db.execSQL(Constants.CREATE_DEBTOR_TABLE);
+        db.execSQL(Constants.CREATE_CREDIT_TABLE);
+        db.execSQL(Constants.CREATE_CREDITOR_TABLE);
+        db.execSQL(Constants.CREATE_DEBT_INSTALMENT_TABLE);
+        db.execSQL(Constants.CREATE_CREDIT_INSTALMENT_TABLE);
+
+    }
+
+
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+       db.execSQL("DROP TABLE IF EXISTS " + Constants.DEBTOR_TABLE_NAME);
+       db.execSQL("DROP TABLE IF EXISTS " + Constants.DEBTS_TABLE_NAME );
+       db.execSQL("DROP TABLE IF EXISTS " + Constants.CREDIT_TABLE_NAME);
+       db.execSQL("DROP TABLE IF EXISTS " + Constants.CREDITOR_TABLE_NAME);
+       db.execSQL("DROP TABLE IF EXISTS " + Constants.DEBT_INSTALMENT_TABLE_NAME);
+       db.execSQL("DROP TABLE IF EXISTS " + Constants.CREDIT_INSTALMENT_TABLE_NAME);
+       this.onCreate(db);
+    }
+
+
+    public void addDebt(Debt debt) {
+       SQLiteDatabase database = this.getWritableDatabase();
+       ContentValues values = new ContentValues();
+       values.put(Constants.DEBTS_TABLE_PROFILE_IMAGE, debt.getProfileImage());
+       values.put(Constants.DEBTS_TABLE_PERSON_NAME, debt.getDebtorName());
+       values.put(Constants.DEBTS_TABLE_PERSON_PHONE, debt.getDebtorPhone());
+       values.put(Constants.DEBTS_TABLE_DEBT_DETAIL, debt.getDebtDescription());
+       values.put(Constants.DEBTS_TABLE_INITIAL_DEBTS, debt.getInitialDebt());
+       values.put(Constants.DEBTS_TABLE_FINAL_AMOUNT, debt.getFinalAmountOwed());
+       values.put(Constants.DEBTS_TABLE_CURRENCY_TYPE, debt.getCurrencyType());
+       values.put(Constants.DEBTS_TABLE_DUE_DATE, debt.getDueDate());
+       values.put(Constants.DEBTS_TABLE_DATE_CREATED, debt.getDateCreated());
+
+       database.insert(Constants.DEBTS_TABLE_NAME,
+               null,
+               values);
+
+
+   }
+
+    public void addCredit(Credit credit) {
+       SQLiteDatabase database = this.getWritableDatabase();
+       ContentValues contentValues = new ContentValues();
+
+       contentValues.put(Constants.CREDIT_TABLE_PROFILE_PHOTO, credit.getProfileImage());
+       contentValues.put(Constants.CREDIT_TABLE_PERSON_NAME, credit.getCreditorName());
+       contentValues.put(Constants.CREDIT_TABLE_PERSON_PHONE, credit.getCreditorPhone());
+       contentValues.put(Constants.CREDIT_TABLE_CREDIT_DETAIL, credit.getCreditDetail());
+       contentValues.put(Constants.CREDIT_TABLE_INITIAL_CREDIT, credit.getInitialCredit());
+       contentValues.put(Constants.CREDIT_TABLE_FINAL_AMOUNT, credit.getFinalAmountOwed());
+       contentValues.put(Constants.CREDIT_TABLE_CURRENCY_TYPE, credit.getCurrencyType());
+       contentValues.put(Constants.CREDIT_TABLE_DUE_DATE, credit.getDueDate());
+       contentValues.put(Constants.CREDIT_TABLE_DATE_CREATED, credit.getDateCreated());
+
+       database.insert(Constants.CREDIT_TABLE_NAME,
+               null,
+               contentValues);
+
+    }
+
+
+    public Debt getDebt(long id) {
+
+        // 1. get reference to readable DB
+        SQLiteDatabase db = this.getReadableDatabase();
+        // 2. build entry object
+        Debt debt = new Debt();
+        // 3. build query
+        Cursor cursor =
+                db.query(Constants.DEBTS_TABLE_NAME, // a. table
+                        Constants.DEBT_TABLE_COLUMNS, // b. column names
+                        " id = ?", // c. selections
+                        new String[]{String.valueOf(id)}, // d. selections args
+                        null, // e. group by
+                        null, // f. having
+                        null, // g. order by
+                        null); // h. limit
+
+        // 4. if we got results get the first one
+        if (cursor != null) {
+            cursor.moveToFirst();
+
+            debt.setProfileImage(cursor.getBlob(1));
+            debt.setDebtorName(cursor.getString(2));
+            debt.setDebtorPhone(cursor.getString(3));
+            debt.setDebtDescription(cursor.getString(4));
+            debt.setInitialDebt(Double.parseDouble(cursor.getString(5)));
+            debt.setFinalAmountOwed(Double.parseDouble(cursor.getString(6)));
+            debt.setDueDate(cursor.getString(7));
+            debt.setDateCreated(cursor.getString(8));
+
+            //Free up cursor
+            cursor.close();
+        }
+        // 5. return entry
+        return debt;
+    }
+
+    public Credit getCredit(long id) {
+        // 1. get reference to readable DB
+        SQLiteDatabase db = this.getReadableDatabase();
+        // 2. build entry object
+        Credit credit = new Credit();
+        // 3. build query
+        Cursor cursor =
+                db.query(Constants.CREDIT_TABLE_NAME, // a. table
+                        Constants.CREDIT_TABLE_COLUMNS, // b. column names
+                        " id = ?", // c. selections
+                        new String[]{String.valueOf(id)}, // d. selections args
+                        null, // e. group by
+                        null, // f. having
+                        null, // g. order by
+                        null); // h. limit
+
+        // 4. if we got results get the first one
+        if (cursor != null) {
+            cursor.moveToFirst();
+
+            credit.setProfileImage(cursor.getBlob(1));
+            credit.setCreditorName(cursor.getString(2));
+            credit.setCreditorPhone(cursor.getString(3));
+            credit.setCreditDetail(cursor.getString(4));
+            credit.setInitialCredit(Double.parseDouble(cursor.getString(5)));
+            credit.setFinalAmountOwed(Double.parseDouble(cursor.getString(6)));
+            credit.setDueDate(cursor.getString(7));
+            credit.setDateCreated(cursor.getString(8));
+
+            //Free up cursor
+            cursor.close();
+        }
+        // 5. return entry
+        return credit;
+    }
+
+    public void addDebtor(Debtor debtor) {
+
+        SQLiteDatabase database = this.getWritableDatabase();
+
+        ContentValues contentValues = new ContentValues();
+
+        contentValues.put(Constants.DEBTOR_ID, debtor.getDebtorPhoneNumber());
+        contentValues.put(Constants.DEBTOR_TABLE_PROFILE_PHOTO, debtor.getProfileImage());
+        contentValues.put(Constants.DEBTOR_TABLE_PERSON_NAME, debtor.getDebtorName());
+        contentValues.put(Constants.DEBTOR_TABLE_PERSON_PHONE, debtor.getDebtorPhoneNumber());
+        contentValues.put(Constants.DEBTOR_TABLE_TOTAL_DEBTS, debtor.getTotalDebts());
+        contentValues.put(Constants.DEBTOR_TABLE_TOTAL_AMOUNT_OWED, debtor.getTotalAmountOwed());
+
+        database.insert(Constants.DEBTOR_TABLE_NAME,
+                null,
+                contentValues);
+    }
+
+    public void addCreditor(Creditor creditor) {
+
+        SQLiteDatabase database = this.getWritableDatabase();
+
+        ContentValues contentValues = new ContentValues();
+
+        contentValues.put(Constants.CREDITOR_TABLE_ID, creditor.getCreditorPhone());
+        contentValues.put(Constants.CREDITOR_TABLE_PROFILE_PHOTO, creditor.getProfileImage());
+        contentValues.put(Constants.CREDITOR_TABLE_PERSON_NAME, creditor.getCreditorName());
+        contentValues.put(Constants.CREDITOR_TABLE_PERSON_PHONE, creditor.getCreditorPhone());
+        contentValues.put(Constants.CREDITOR_TABLE_TOTAL_CREDITS, creditor.getTotalCredits());
+        contentValues.put(Constants.CREDITOR_TABLE_TOTAL_AMOUNT_OWED, creditor.getTotalAmountOwed());
+
+        database.insert(Constants.CREDITOR_TABLE_NAME,
+                null,
+                contentValues);
+    }
+
+    public Debtor getDebtor(String debtorId) {
+
+        // 1. get reference to readable DB
+        SQLiteDatabase db = this.getReadableDatabase();
+        // 2. build debt object
+        Debtor debtor = new Debtor();
+        // 3. build query
+        Cursor cursor =
+                db.query(Constants.DEBTOR_TABLE_NAME, // a. table
+                        Constants.DEBTOR_TABLE_COLUMNS, // b. column names
+                        " id = ?", // c. selections
+                        new String[]{String.valueOf(debtorId)}, // d. selections args
+                        null, // e. group by
+                        null, // f. having
+                        null, // g. order by
+                        null); // h. limit
+
+        // 4. if we got results get the first one
+        if (cursor != null) {
+            cursor.moveToFirst();
+
+            debtor.setProfileImage(cursor.getBlob(1));
+            debtor.setDebtorName(cursor.getString(2));
+            debtor.setDebtorPhoneNumber(cursor.getString(3));
+            debtor.setTotalDebts(Integer.parseInt(cursor.getString(4)));
+            debtor.setTotalAmountOwed(Double.parseDouble(cursor.getString(5)));
+
+            //Free up cursor
+            cursor.close();
+        }
+        //Return person
+        return debtor;
+    }
+
+    public List<Debtor> getAllDebtors() {
+        List<Debtor> debtorList = new LinkedList<>();
+        String query = "SELECT * FROM " + Constants.DEBTOR_TABLE_NAME;
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(query, null);
+        Debtor debtor;
+        if (cursor.moveToFirst()) {
+            do {
+                debtor = new Debtor();
+                debtor.setProfileImage(cursor.getBlob(1));
+                debtor.setDebtorName(cursor.getString(2));
+                debtor.setDebtorPhoneNumber(cursor.getString(3));
+                debtor.setTotalDebts(Integer.parseInt(cursor.getString(4)));
+                debtor.setTotalAmountOwed(Double.parseDouble(cursor.getString(5)));
+
+                debtorList.add(debtor);
+            } while (cursor.moveToNext());
+        }
+        return debtorList;
+    }
+
+    public List<Creditor> getAllCreditors() {
+        List<Creditor> creditorList = new LinkedList<>();
+        String query = "SELECT * FROM " + Constants.CREDITOR_TABLE_NAME;
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery(query, null);
+        Creditor creditor;
+        if (cursor.moveToFirst()) {
+            do {
+                creditor = new Creditor();
+                creditor.setProfileImage(cursor.getBlob(1));
+                creditor.setCreditorName(cursor.getString(2));
+                creditor.setCreditorPhone(cursor.getString(3));
+                creditor.setTotalCredits(Integer.parseInt(cursor.getString(4)));
+                creditor.setTotalAmountOwed(Double.parseDouble(cursor.getString(5)));
+
+                creditorList.add(creditor);
+            } while (cursor.moveToNext());
+        }
+        return creditorList;
+    }
+
+    public Creditor getCreditor(String creditorId) {
+        // 1. get reference to readable DB
+        SQLiteDatabase db = this.getReadableDatabase();
+        // 2. build creditor object
+        Creditor creditor = new Creditor();
+        // 3. build query
+        Cursor cursor =
+                db.query(Constants.CREDITOR_TABLE_NAME, // a. table
+                        Constants.CREDITOR_TABLE_COLUMNS, // b. column names
+                        " id = ?", // c. selections
+                        new String[]{String.valueOf(creditorId)}, // d. selections args
+                        null, // e. group by
+                        null, // f. having
+                        null, // g. order by
+                        null); // h. limit
+
+        // 4. if we got results get the first one
+        if (cursor != null) {
+            cursor.moveToFirst();
+
+            creditor.setProfileImage(cursor.getBlob(1));
+            creditor.setCreditorName(cursor.getString(2));
+            creditor.setCreditorPhone(cursor.getString(3));
+            creditor.setTotalCredits(Integer.parseInt(cursor.getString(4)));
+            creditor.setTotalAmountOwed(Double.parseDouble(cursor.getString(5)));
+
+            //Free up cursor
+            cursor.close();
+        }
+        //Return creditor
+        return creditor;
+    }
+
+    public List<Debt> getAllDebts() {
+        List<Debt> debtList = new ArrayList<>();
+
+        // 1. build the query
+        String query = "SELECT  * FROM " + Constants.DEBTS_TABLE_NAME;
+
+        // 2. get reference to writable DB
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        //3. Cursor object for iterating over rows in database and returning values in each row
+        Cursor cursor = db.rawQuery(query, null);
+
+        //4. go over each row, build entry and add it to list
+        Debt debt;
+        if (cursor.moveToFirst()) {
+            do {
+                debt = new Debt();
+
+                debt.setProfileImage(cursor.getBlob(1));
+                debt.setDebtorName(cursor.getString(2));
+                debt.setDebtorPhone(cursor.getString(3));
+                debt.setDebtDescription(cursor.getString(4));
+                debt.setInitialDebt(Double.parseDouble(cursor.getString(5)));
+                debt.setFinalAmountOwed(Double.parseDouble(cursor.getString(6)));
+                debt.setCurrencyType(cursor.getString(7));
+                debt.setDueDate(cursor.getString(8));
+                debt.setDateCreated(cursor.getString(9));
+
+                //5. Add entry to debts list
+                debtList.add(debt);
+
+                //Write the total number of debts returned to sharedPreferences
+                //drawerListCounters.saveDebtsCount(debtList.size());
+
+                //6. Free up the cursor after use
+                //cursor.close();
+
+            } while (cursor.moveToNext());
+        } else {
+            //drawerListCounters.saveDebtsCount(debtList.size());
+            // Toast.makeText(context, "No debts added yet!", Toast.LENGTH_LONG).show();
+        }
+        //7. return debts
+        return debtList;
+    }
+
+    public List<Credit> getAllCredits() {
+       List<Credit> creditList = new ArrayList<>();
+       String query = "SELECT * FROM " + Constants.CREDIT_TABLE_NAME;
+
+       SQLiteDatabase database = this.getWritableDatabase();
+       Cursor cursor = database.rawQuery(query, null);
+       Credit credit;
+       if(cursor.moveToFirst()) {
+           do {
+               credit = new Credit();
+               credit.setProfileImage(cursor.getBlob(1));
+               credit.setCreditorName(cursor.getString(2));
+               credit.setCreditorPhone(cursor.getString(3));
+               credit.setCreditDetail(cursor.getString(4));
+               credit.setInitialCredit(Double.parseDouble(cursor.getString(5)));
+               credit.setFinalAmountOwed(Double.parseDouble(cursor.getString(6)));
+               credit.setCurrencyType(cursor.getString(7));
+               credit.setDueDate(cursor.getString(8));
+               credit.setDateCreated(cursor.getString(9));
+
+               creditList.add(credit);
+
+               //drawerListCounters.saveCreditCount(creditList.size());
+           } while (cursor.moveToNext());
+       } else {
+           //drawerListCounters.saveCreditCount(creditList.size());
+       }
+       return creditList;
+   }
+
+    public boolean checkIfDebtorExist(String debtorId) {
+
+       SQLiteDatabase database = this.getReadableDatabase();
+
+       String Query = "Select * from " + Constants.DEBTOR_TABLE_NAME + " where " + Constants.DEBTOR_ID + " = '" + debtorId+"'";
+       Cursor cursor = database.rawQuery(Query, null);
+       if(cursor.getCount() <= 0){
+           cursor.close();
+           return false;
+       }
+       cursor.close();
+
+       return true;
+   }
+
+    public boolean checkIfCreditorExist(String creditorId) {
+        SQLiteDatabase database = this.getReadableDatabase();
+        String query = "select * from " + Constants.CREDITOR_TABLE_NAME + " where " + Constants.CREDITOR_TABLE_ID + "= '" + creditorId + "'";
+        Cursor cursor = database.rawQuery(query, null);
+        if(cursor.getCount() <= 0) {
+            cursor.close();
+            return false;
+        }
+        cursor.close();
+        return true;
+    }
+
+    public boolean updateDebtorRecord(String debtorId, int newTotalDebt, double newTotalOwed) {
+        String filter = Constants.DEBTOR_ID +"= '" + debtorId +"'";
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues contentValues = new ContentValues();
+
+        int newTotalDebts = newTotalDebt + getDebtor(debtorId).getTotalDebts();
+        double newTotalMoneyOwed = newTotalOwed + getDebtor(debtorId).getTotalAmountOwed();
+
+
+        contentValues.put(Constants.DEBTOR_TABLE_TOTAL_DEBTS, newTotalDebts);
+        contentValues.put(Constants.DEBTOR_TABLE_TOTAL_AMOUNT_OWED, newTotalMoneyOwed);
+
+        return db.update(Constants.DEBTOR_TABLE_NAME, contentValues, filter, null) > 0;
+    }
+
+    public boolean updateCreditorRecord(String creditorId, int newTotalCredits, double newTotalOwed) {
+        String filter = Constants.CREDITOR_TABLE_ID + "= '" + creditorId + "'";
+        SQLiteDatabase database = this.getWritableDatabase();
+        ContentValues contentValues = new ContentValues();
+
+        int newTotalCredit = newTotalCredits + getCreditor(creditorId).getTotalCredits();
+        double newTotalAmountOwed = newTotalOwed + getCreditor(creditorId).getTotalAmountOwed();
+
+        contentValues.put(Constants.CREDITOR_TABLE_TOTAL_CREDITS, newTotalCredit);
+        contentValues.put(Constants.CREDITOR_TABLE_TOTAL_AMOUNT_OWED, newTotalAmountOwed);
+
+        return database.update(Constants.CREDITOR_TABLE_NAME, contentValues, filter, null) > 0;
+
+    }
+
+    public ArrayList<Cursor> getData(String Query) {
+        //get writable database
+        SQLiteDatabase sqlDB = this.getWritableDatabase();
+        String[] columns = new String[] { "mesage" };
+        //an array list of cursor to save two cursors one has results from the query
+        //other cursor stores error message if any errors are triggered
+        ArrayList<Cursor> alc = new ArrayList<Cursor>(2);
+        MatrixCursor Cursor2= new MatrixCursor(columns);
+        alc.add(null);
+        alc.add(null);
+
+
+        try{
+            String maxQuery = Query ;
+            //execute the query results will be save in Cursor c
+            Cursor c = sqlDB.rawQuery(maxQuery, null);
+
+
+            //add value to cursor2
+            Cursor2.addRow(new Object[] { "Success" });
+
+            alc.set(1,Cursor2);
+            if (null != c && c.getCount() > 0) {
+
+
+                alc.set(0,c);
+                c.moveToFirst();
+
+                return alc ;
+            }
+            return alc;
+        } catch(SQLException sqlEx){
+            Log.d("printing exception", sqlEx.getMessage());
+            //if any exceptions are triggered save the error message to cursor an return the arraylist
+            Cursor2.addRow(new Object[] { ""+sqlEx.getMessage() });
+            alc.set(1,Cursor2);
+            return alc;
+        } catch(Exception ex){
+
+            Log.d("printing exception", ex.getMessage());
+
+            //if any exceptions are triggered save the error message to cursor an return the arraylist
+            Cursor2.addRow(new Object[] { ""+ex.getMessage() });
+            alc.set(1,Cursor2);
+            return alc;
+        }
+
+
+    }
+
+    public void addDebtInstalment(long debtId, double instalment) {
+        Date date = new Date();
+        String dateCreated = date.toString();
+
+        ContentValues contentValues = new ContentValues();
+        SQLiteDatabase database = this.getWritableDatabase();
+
+        contentValues.put(Constants.INSTALMENT_DEBT_ID, debtId);
+        contentValues.put(Constants.INSTALMENT, instalment);
+        contentValues.put(Constants.INSTALMENT_DATE_CREATED, dateCreated);
+
+        database.insert(Constants.DEBT_INSTALMENT_TABLE_NAME,
+                null,
+                contentValues);
+
+    }
+
+    public void addCreditInstalment(long creditId, double instalment) {
+        Date date = new Date();
+        String dateCreated = date.toString();
+
+        ContentValues contentValues = new ContentValues();
+        SQLiteDatabase database = this.getWritableDatabase();
+
+        contentValues.put(Constants.INSTALMENT_CREDIT_ID, creditId);
+        contentValues.put(Constants.INSTALMENT, instalment);
+        contentValues.put(Constants.INSTALMENT_DATE_CREATED, dateCreated);
+
+        database.insert(Constants.CREDIT_INSTALMENT_TABLE_NAME,
+                null,
+                contentValues);
+
+    }
+
+    public List<DebtInstalment> getDebtInstalments(long debtId) {
+        List<DebtInstalment> instalmentList = new ArrayList<>();
+
+        String query = "SELECT * FROM  " + Constants.DEBT_INSTALMENT_TABLE_NAME + " WHERE " + Constants.INSTALMENT_DEBT_ID+ "=" + debtId;
+
+        // 2. get reference to writable DB
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        //3. Cursor object for iterating over rows in database and returning values in each row
+        Cursor cursor = db.rawQuery(query, null);
+
+        DebtInstalment instalment;
+
+        if(cursor.moveToFirst()) {
+            do {
+                instalment = new DebtInstalment();
+                instalment.setInstalment(Double.parseDouble(cursor.getString(2)));
+                instalment.setDateCreated(cursor.getString(3));
+
+                instalmentList.add(instalment);
+
+            } while(cursor.moveToNext());
+        }
+
+        //Free the cursor
+        cursor.close();
+        return instalmentList;
+    }
+
+    public List<CreditInstalment> getCreditInstalments(long creditId) {
+        List<CreditInstalment> instalmentList = new ArrayList<>();
+
+        String query = "SELECT * FROM  " + Constants.CREDIT_INSTALMENT_TABLE_NAME + " WHERE " + Constants.INSTALMENT_CREDIT_ID+ "=" + creditId;
+
+        // 2. get reference to writable DB
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        //3. Cursor object for iterating over rows in database and returning values in each row
+        Cursor cursor = db.rawQuery(query, null);
+
+        CreditInstalment instalment;
+
+        if(cursor.moveToFirst()) {
+            do {
+                instalment = new CreditInstalment();
+                instalment.setInstalment(Double.parseDouble(cursor.getString(2)));
+                instalment.setDateCreated(cursor.getString(3));
+
+                instalmentList.add(instalment);
+
+            } while(cursor.moveToNext());
+        }
+
+        //Free the cursor
+        cursor.close();
+        return instalmentList;
+    }
+
+    public void updateDebt(long debtId, double instalment) {
+        String filter = Constants.DEBTS_TABLE_ID + "=" + debtId;
+
+        SQLiteDatabase database = this.getWritableDatabase();
+        ContentValues contentValues = new ContentValues();
+
+        double finalDebt = getDebt(debtId).getFinalAmountOwed();
+
+        if (instalment > finalDebt) {
+            Toast.makeText(mContext, "Sorry, Instalment is more than initial debt", Toast.LENGTH_LONG).show();
+            return;
+        } else {
+            double newDebt = finalDebt - instalment;
+
+            getDebt(debtId).setFinalAmountOwed(newDebt);
+
+            contentValues.put(Constants.DEBTS_TABLE_FINAL_AMOUNT, newDebt);
+            addDebtInstalment(debtId, instalment);
+        }
+
+
+        database.update(Constants.DEBTS_TABLE_NAME, contentValues, filter, null);
+
+    }
+
+    public void updateCredit(long creditId, double instalment) {
+        String filter = Constants.CREDIT_TABLE_ID + "=" + creditId;
+
+        SQLiteDatabase database = this.getWritableDatabase();
+        ContentValues contentValues = new ContentValues();
+
+        double finalCredit = getCredit(creditId).getFinalAmountOwed();
+
+        if (instalment > finalCredit) {
+            Toast.makeText(mContext, "Sorry, Instalment is more than initial credit", Toast.LENGTH_LONG).show();
+            return;
+        } else {
+            double newCredit = finalCredit - instalment;
+
+            getCredit(creditId).setFinalAmountOwed(newCredit);
+
+            contentValues.put(Constants.CREDIT_TABLE_FINAL_AMOUNT, newCredit);
+            addCreditInstalment(creditId, instalment);
+        }
+
+
+        database.update(Constants.CREDIT_TABLE_NAME, contentValues, filter, null);
+
+    }
+
+    public List<Debt> getDebtorDebts(String debtorId) {
+        List<Debt> debtList= new ArrayList<>();
+
+        String query = "SELECT * FROM " + Constants.DEBTS_TABLE_NAME
+                + " WHERE " + Constants.DEBTOR_TABLE_PERSON_PHONE + "=" + " '" + debtorId +"'";
+
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cursor = database.rawQuery(query, null);
+
+        /*public Entry(String customerName, String customerPhone, String itemName, double unitPrice, int itemQuantity,
+        double amountPaid, double amountDue, String dueDate, String dateCreated)*/
+
+        //Go over each row, build entry and add it to the list
+        Debt debt = null;
+        if(cursor.moveToFirst()) {
+            do {
+                debt = new Debt();
+                debt.setDebtorName(cursor.getString(1));
+                debt.setDebtorPhone(cursor.getString(2));
+                debt.setDebtDescription(cursor.getString(3));
+                debt.setFinalAmountOwed(Double.parseDouble(cursor.getString(4)));
+
+                debtList.add(debt);
+            } while (cursor.moveToNext());
+        } else {
+            //Toast.makeText(, "No entry associated with this debtor", Toast.LENGTH_LONG).show();
+            Log.d("Person And Entry", "No entry associated with this debtor");
+        }
+
+        return debtList;
+    }
+
+    public List<Credit> getCreditorCredits(String creditorId) {
+        List<Credit> creditList= new ArrayList<>();
+
+        String query = "SELECT * FROM " + Constants.CREDIT_TABLE_NAME
+                + " WHERE " + Constants.CREDITOR_TABLE_PERSON_PHONE + "=" + " '" + creditorId +"'";
+
+        SQLiteDatabase database = this.getWritableDatabase();
+        Cursor cursor = database.rawQuery(query, null);
+
+        /*public Entry(String customerName, String customerPhone, String itemName, double unitPrice, int itemQuantity,
+        double amountPaid, double amountDue, String dueDate, String dateCreated)*/
+
+        //Go over each row, build entry and add it to the list
+        Credit credit = null;
+        if(cursor.moveToFirst()) {
+            do {
+                credit = new Credit();
+                credit.setCreditorName(cursor.getString(1));
+                credit.setCreditorPhone(cursor.getString(2));
+                credit.setCreditDetail(cursor.getString(3));
+                credit.setFinalAmountOwed(Double.parseDouble(cursor.getString(4)));
+
+                creditList.add(credit);
+            } while (cursor.moveToNext());
+        } else {
+            //Toast.makeText(, "No entry associated with this debtor", Toast.LENGTH_LONG).show();
+            Log.d("Person And Entry", "No entry associated with this debtor");
+        }
+
+        cursor.close();
+        return creditList;
+    }
+
+    public ArrayList<HashMap<String, String>> fetchAllDebtDetails() {
+        try {
+            ArrayList<HashMap<String, String>> debtsArrayList = new ArrayList<HashMap<String, String>>();
+            HashMap<String, String> map;
+
+            SQLiteDatabase database = this.getReadableDatabase();
+
+            String query = "SELECT * FROM " + Constants.DEBTS_TABLE_NAME;
+
+            Cursor cursor = database.rawQuery(query, null);
+
+            if (cursor != null) {
+                if (cursor.moveToFirst()) {
+                    do {
+                        map = new HashMap<>();
+                        map.put("id", cursor.getString(0));
+                        map.put("phone_number", cursor.getString(3));
+                        map.put("amount_owed", cursor.getString(6));
+                        map.put("description", cursor.getString(4));
+                        map.put("due_date", cursor.getString(8));
+                        map.put("currency_type", cursor.getString(7));
+                        map.put("initial_debt", cursor.getString(5));
+                        debtsArrayList.add(map);
+
+                    } while (cursor.moveToNext());
+                }
+            }
+            if (cursor != null) {
+                cursor.close();
+            }
+            database.close();
+            return debtsArrayList;
+
+
+        } catch (Exception e) {
+            return null;
+        }
+
+    }
+
+    public ArrayList<HashMap<String, String>> fetchAllCreditDetails() {
+        try {
+            ArrayList<HashMap<String, String>> creditArrayList = new ArrayList<HashMap<String, String>>();
+            HashMap<String, String> map;
+
+            SQLiteDatabase database = this.getReadableDatabase();
+
+            String query = "SELECT * FROM " + Constants.CREDIT_TABLE_NAME;
+
+            Cursor cursor = database.rawQuery(query, null);
+
+            if (cursor != null) {
+                if (cursor.moveToFirst()) {
+                    do {
+                        map = new HashMap<>();
+                        map.put("id", cursor.getString(0));
+                        map.put("phone_number", cursor.getString(3));
+                        map.put("amount_owed", cursor.getString(6));
+                        map.put("credit_description", cursor.getString(4));
+                        map.put("due_date", cursor.getString(8));
+                        map.put("currency_type", cursor.getString(7));
+                        map.put("initial_credit", cursor.getString(5));
+                        creditArrayList.add(map);
+
+                    } while (cursor.moveToNext());
+                }
+            }
+            if (cursor != null) {
+                cursor.close();
+            }
+            database.close();
+            return creditArrayList;
+
+
+        } catch (Exception e) {
+            return null;
+        }
+
+    }
+
+    public ArrayList<HashMap<String, String>> fetchAllDebtorDetails() {
+        try {
+            ArrayList<HashMap<String, String>> debtorArrayList = new ArrayList<HashMap<String, String>>();
+            HashMap<String, String> map;
+
+            SQLiteDatabase database = this.getReadableDatabase();
+
+            String query = "SELECT * FROM " + Constants.DEBTOR_TABLE_NAME;
+
+            Cursor cursor = database.rawQuery(query, null);
+
+            if (cursor != null) {
+                if (cursor.moveToFirst()) {
+                    do {
+                        map = new HashMap<>();
+                        map.put("debtorId", cursor.getString(0));
+                        map.put("totalDebts", cursor.getString(3));
+
+                        debtorArrayList.add(map);
+
+                    } while (cursor.moveToNext());
+                }
+            }
+            if (cursor != null) {
+                cursor.close();
+            }
+            database.close();
+            return debtorArrayList;
+
+
+        } catch (Exception e) {
+            return null;
+        }
+
+    }
+
+    public ArrayList<HashMap<String, String>> fetchAllCreditorDetails() {
+        try {
+            ArrayList<HashMap<String, String>> creditorArrayList = new ArrayList<HashMap<String, String>>();
+            HashMap<String, String> map;
+
+            SQLiteDatabase database = this.getReadableDatabase();
+
+            String query = "SELECT * FROM " + Constants.CREDITOR_TABLE_NAME;
+
+            Cursor cursor = database.rawQuery(query, null);
+
+            if (cursor != null) {
+                if (cursor.moveToFirst()) {
+                    do {
+                        map = new HashMap<>();
+                        map.put("creditorId", cursor.getString(0));
+                        map.put("totalCredits", cursor.getString(3));
+
+                        creditorArrayList.add(map);
+
+                    } while (cursor.moveToNext());
+                }
+            }
+            if (cursor != null) {
+                cursor.close();
+            }
+            database.close();
+            return creditorArrayList;
+
+
+        } catch (Exception e) {
+            return null;
+        }
+
+    }
+
+    //Delete
+
+    public void deleteDebt(Context context, long id) {
+        SQLiteDatabase database = this.getReadableDatabase();
+        String deleteQuery = "DELETE FROM " + Constants.DEBTS_TABLE_NAME + " WHERE id =" + id;
+        database.execSQL(deleteQuery);
+        deleteDebtInstalment(id);
+        //database.close();
+    }
+
+    public void deleteDebtor(String debtorId) {
+        SQLiteDatabase database = this.getReadableDatabase();
+        String deleteQuery = "DELETE FROM " + Constants.DEBTOR_TABLE_NAME + " WHERE id = " + "'"+ debtorId +"'";
+        database.execSQL(deleteQuery);
+    }
+
+    public void deleteDebtInstalment(long debtId) {
+        SQLiteDatabase database = this.getReadableDatabase();
+        String deleteQuery = "DELETE FROM " + Constants.DEBT_INSTALMENT_TABLE_NAME + " WHERE " + Constants.INSTALMENT_DEBT_ID + "=" + debtId;
+        database.execSQL(deleteQuery);
+    }
+
+    public void deleteCredit(long id) {
+        SQLiteDatabase database = this.getReadableDatabase();
+        String deleteQuery = "DELETE FROM " + Constants.CREDIT_TABLE_NAME + " WHERE id =" + id;
+        database.execSQL(deleteQuery);
+        deleteCreditInstalment(id);
+
+    }
+
+    public void deleteCreditor(String creditorId) {
+        SQLiteDatabase database = this.getReadableDatabase();
+        String deleteQuery = "DELETE FROM " + Constants.CREDITOR_TABLE_NAME + " WHERE id = " + "'"+ creditorId +"'";
+        database.execSQL(deleteQuery);
+    }
+
+    public void deleteCreditInstalment(long creditId) {
+        SQLiteDatabase database = this.getReadableDatabase();
+        String deleteQuery = "DELETE FROM " + Constants.CREDIT_INSTALMENT_TABLE_NAME + " WHERE " + Constants.INSTALMENT_CREDIT_ID + "=" + creditId;
+        database.execSQL(deleteQuery);
+    }
+
+    public boolean postDebtDeleteUpdate(String debtorId, double amountOwed) {
+
+        SQLiteDatabase database = this.getWritableDatabase();
+        String filter = Constants.DEBTOR_ID +"= '" +debtorId +"'";
+        ContentValues contentValues = new ContentValues();
+
+        int newTotalDebts = getDebtor(debtorId).getTotalDebts() - 1;
+        double newAmountOwed = getDebtor(debtorId).getTotalAmountOwed() - amountOwed;
+
+        contentValues.put(Constants.DEBTOR_TABLE_TOTAL_DEBTS, newTotalDebts);
+        contentValues.put(Constants.DEBTOR_TABLE_TOTAL_AMOUNT_OWED, newAmountOwed);
+
+        return database.update(Constants.DEBTOR_TABLE_NAME, contentValues, filter, null) > 0;
+
+    }
+
+    public boolean postCreditDeleteUpdate(String creditorId, double amountOwed) {
+
+        SQLiteDatabase database = this.getWritableDatabase();
+        String filter = Constants.CREDITOR_TABLE_ID +"= '" +creditorId +"'";
+        ContentValues contentValues = new ContentValues();
+
+        int newTotalCredits = getCreditor(creditorId).getTotalCredits() - 1;
+        double newAmountOwed = getCreditor(creditorId).getTotalAmountOwed() - amountOwed;
+
+        contentValues.put(Constants.CREDITOR_TABLE_TOTAL_CREDITS, newTotalCredits);
+        contentValues.put(Constants.CREDITOR_TABLE_TOTAL_AMOUNT_OWED, newAmountOwed);
+
+        return database.update(Constants.CREDITOR_TABLE_NAME, contentValues, filter, null) > 0;
+
+    }
+
+
+
+}
